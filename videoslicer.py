@@ -1,18 +1,9 @@
-from asyncio.windows_events import NULL
 import sys
-from PyQt5.QtWidgets import *
-from PyQt5 import uic
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+from asyncio.windows_events import NULL
+from PyQt5 import QtCore, QtGui, QtWidgets, uic
 
-#UI파일 연결
-#단, UI파일은 Python 코드 파일과 같은 디렉토리에 위치해야한다.
 form_class = uic.loadUiType("videoslicer.ui")[0]
 
-from PyQt5 import QtCore, QtGui, QtWidgets, uic
-import sys
-
-#화면을 띄우는데 사용되는 Class 선언
 class WindowClass(QMainWindow, form_class) :
     def __init__(self) :
         super().__init__()
