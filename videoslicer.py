@@ -7,7 +7,7 @@ from PyQt5.QtGui import *
 
 #UI파일 연결
 #단, UI파일은 Python 코드 파일과 같은 디렉토리에 위치해야한다.
-form_class = uic.loadUiType("untitled.ui")[0]
+form_class = uic.loadUiType("videoslicer.ui")[0]
 
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 import sys
