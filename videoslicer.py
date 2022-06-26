@@ -1,6 +1,7 @@
 import sys
 from asyncio.windows_events import NULL
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
+from PyQt5.QtWidgets import QApplication
 
 form_class = uic.loadUiType("videoslicer.ui")[0]
 
