@@ -1,9 +1,103 @@
-import sys
+import numpy as np
+import cv2
+import shutil
+import os, sys
 from asyncio.windows_events import NULL
-from PyQt5 import QtCore, QtGui, QtWidgets, uic
-from PyQt5.QtWidgets import QApplication
+from PyQt5 import uic
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 
 form_class = uic.loadUiType("videoslicer.ui")[0]
+def naming(length, name):
+    string = ""
+    for i in range(0, length-len(name)):
+        string = string + "0"
+
+    return string + name 
+
+def imread(filename, flags=cv2.IMREAD_COLOR, dtype=np.uint8):
+    try:
+        n = np.fromfile(filename, dtype)
+        img = cv2.imdecode(n, flags)
+        return img
+    except Exception as e:
+        print(e)
+        return None
+
+def imwrite(filename, img, params=None):
+    try:
+        ext = os.path.splitext(filename)[1]
+        result, n = cv2.imencode(ext, img, params)
+        if result:
+            with open(filename, mode='w+b') as f:
+                n.tofile(f)
+            return True
+        else:
+            return False
+    except Exception as e:
+            print(e)
+            return False
+
+def sampling(video_dir, save_dir, slicing_type, slicing_cnt, ext, start_num=1):
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir)
+    
+    videolist = os.listdir(video_dir)
+    
+
+    for index, video in enumerate(videolist):
+        cntlen = len(str(start_num))
+        videoname, videoext = os.path.splitext(video)
+        if not videoext == ".mp4" and not videoext == ".avi":
+            continue
+        
+        shutil.copyfile(os.path.join(video_dir, video),"vidioslicer.tmp")
+        cap = cv2.VideoCapture("vidioslicer.tmp")
+        length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        frame = -1
+        cwd = os.getcwd()
+        
+        if slicing_type == "fps":
+            aaa = int(slicing_cnt)
+        else:
+            aaa = length / int(slicing_cnt)
+    
+        fileCount = int(start_num)
+        
+        objWd = save_dir
+        while(cap.isOpened()):
+            ret, im = cap.read()
+            frame+=1
+            if not ret:
+                break
+            if not frame%aaa < 1:
+                continue
+            
+            if not objWd == os.getcwd():
+                os.chdir(objWd)
+            
+            
+            if ext == "jpg":
+                cv2.imwrite("temp."+ext, im)
+                os.rename("temp."+ext, os.path.join(videoname  +"_"+naming(cntlen, str(fileCount))+"."+ext))
+            else:           
+                cv2.imwrite("temp."+ext, im,  [cv2.IMWRITE_PNG_COMPRESSION, 1])
+                os.rename("temp."+ext, os.path.join(videoname +"_"+naming(cntlen, str(fileCount))+"."+ext))
+                
+            fileCount += 1
+        cap.release()
+        
+        os.chdir(cwd)
+        os.remove("vidioslicer.tmp")
+        
+        print("{} ".format(videoname + "_"+str(naming(6, str(index)))+" 완료"))
+
+        break #임시로 디렉터리 안의 하나의 비디오만 처리 후 종료
+        
+        
+    print("end")
+
 
 class WindowClass(QMainWindow, form_class) :
     def __init__(self) :
@@ -15,33 +109,46 @@ class WindowClass(QMainWindow, form_class) :
 
     def set_only_int(self):
         self.onlyInt = QIntValidator()
-        self.lineEdit_4.setValidator(self.onlyInt)
-        self.lineEdit.setValidator(self.onlyInt)
+        self.tb_start_num.setValidator(self.onlyInt)
+        self.tb_num.setValidator(self.onlyInt)
     
     def initUI(self):
-        self.pushButton.clicked.connect(self.video_folder_open)
-        self.pushButton_2.clicked.connect(self.save_folder_open)
-        self.pushButton_3.clicked.connect(self.do_convert)
+        self.btn_open_video_dir.clicked.connect(self.open_video_dir)
+        self.btn_open_save_dir.clicked.connect(self.open_save_dir)
+        self.btn_do_convert.clicked.connect(self.do_convert)
 
     
-    def video_folder_open(self):
-        global video_folder
-        video_folder_tmp = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Folder')
-        if video_folder_tmp != NULL or video_folder_tmp != "":
-            video_folder = video_folder_tmp
-        self.textBrowser_2.clear()
-        self.textBrowser_2.append(video_folder)
+    def open_video_dir(self):
+        global video_dir
+
+        video_dir_tmp = QFileDialog.getExistingDirectory(self, 'Select Folder')
+        if video_dir_tmp != NULL or video_dir_tmp != "":
+            video_dir = video_dir_tmp
+        self.tb_video_dir.clear()
+        self.tb_video_dir.append(video_dir)
 
 
-    def save_folder_open(self):
-        global save_folder
-        save_folder_tmp = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Folder')
-        if save_folder_tmp != NULL or save_folder_tmp != "":
-            save_folder = save_folder_tmp
-        self.textBrowser.append(save_folder)
+    def open_save_dir(self):
+        global save_dir
+        save_dir_tmp = QFileDialog.getExistingDirectory(self, 'Select Folder')
+        #ave_dir_tmp =  QFileDialog(self, windowTitle='Select directory')
+        #save_dir_tmp.setDirectory(self.lineEdit.text() or __file__)
+        #save_dir_tmp.setFileMode(save_dir_tmp.Directory)
+        #save_dir_tmp.setOptions(save_dir_tmp.DontUseNativeDialog)
+
+        if save_dir_tmp != NULL or save_dir_tmp != "":
+            save_dir = save_dir_tmp
+        self.tb_save_dir.append(save_dir)
     
     def do_convert(self):
-        self.pushButton_3.setText("변환 중...")
+        ext = "jpg" if self.rb_jpg.isChecked() else "png"
+    
+        slicing_type = "fps" if self.btn_fps.isChecked() else "img_cnt"
+        slicing_num = self.tb_num.text()
+        start_num = self.tb_start_num.text()
+        self.btn_do_convert.setText("변환 중...")
+        sampling(video_dir, save_dir, slicing_type, slicing_num, ext, start_num)
+        self.btn_do_convert.setText("변환")
 
     #def checked_file_name(self):
     #def checked_start_number(self):
@@ -53,3 +160,4 @@ if __name__ == "__main__" :
     myWindow = WindowClass() 
     myWindow.show()
     app.exec_()
+
