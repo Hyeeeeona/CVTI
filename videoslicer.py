@@ -2,13 +2,15 @@ import numpy as np
 import cv2
 import shutil
 import os, sys
-from asyncio.windows_events import NULL
 from PyQt5 import uic
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+from glob import glob
 
 form_class = uic.loadUiType("videoslicer.ui")[0]
+classes = ["normal", "collapse"]
+
 def naming(length, name):
     string = ""
     for i in range(0, length-len(name)):
@@ -40,21 +42,34 @@ def imwrite(filename, img, params=None):
             return False
 
 def sampling(video_dir, save_dir, slicing_type, slicing_cnt, ext, start_num=1):
-    if not os.path.isdir(save_dir):
-        os.mkdir(save_dir)
+#    if not os.path.isdir(save_dir):
+#        os.mkdir(save_dir)
     
-    videolist = os.listdir(video_dir)
-    
+    videolist = { os.path.splitext(os.path.basename(file)) for file in glob(video_dir + "/*.mp4") }
 
-    for index, video in enumerate(videolist):
+    #video name directory 생성
+    #class unique directory 생성
+    #images, annotations 파일 생성
+    # make directories
+
+    for index, name, ext in enumerate(videolist):
+        try:
+            tmp = name.split('_')
+            if tmp[0] not in classes:
+                  print("video file name error")
+                continue
+            video_class = tmp[0]
+            video_name = tmp[1]
+        except:
+            print("ff")
+    
+        if not os.path.isdir(save_dir + "/" + 
+        
         cntlen = len(str(start_num))
-        videoname, videoext = os.path.splitext(video)
-        if not videoext == ".mp4" and not videoext == ".avi":
-            continue
         
         shutil.copyfile(os.path.join(video_dir, video),"vidioslicer.tmp")
         cap = cv2.VideoCapture("vidioslicer.tmp")
-        length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        length = cap.get(cv2.CAP_PROP_FRAME_COUNT)
         frame = -1
         cwd = os.getcwd()
         
@@ -68,7 +83,7 @@ def sampling(video_dir, save_dir, slicing_type, slicing_cnt, ext, start_num=1):
         objWd = save_dir
         while(cap.isOpened()):
             ret, im = cap.read()
-            frame+=1
+            frame = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
             if not ret:
                 break
             if not frame%aaa < 1:
@@ -80,10 +95,10 @@ def sampling(video_dir, save_dir, slicing_type, slicing_cnt, ext, start_num=1):
             
             if ext == "jpg":
                 cv2.imwrite("temp."+ext, im)
-                os.rename("temp."+ext, os.path.join(videoname  +"_"+naming(cntlen, str(fileCount))+"."+ext))
+                os.rename("temp."+ext, os.path.join(videoname  +"_"+naming(cntlen, str(frame))+"."+ext))
             else:           
                 cv2.imwrite("temp."+ext, im,  [cv2.IMWRITE_PNG_COMPRESSION, 1])
-                os.rename("temp."+ext, os.path.join(videoname +"_"+naming(cntlen, str(fileCount))+"."+ext))
+                os.rename("temp."+ext, os.path.join(videoname +"_"+naming(cntlen, str(frame))+"."+ext))
                 
             fileCount += 1
         cap.release()
@@ -122,7 +137,7 @@ class WindowClass(QMainWindow, form_class) :
         global video_dir
 
         video_dir_tmp = QFileDialog.getExistingDirectory(self, 'Select Folder')
-        if video_dir_tmp != NULL or video_dir_tmp != "":
+        if video_dir_tmp != None or video_dir_tmp != "":
             video_dir = video_dir_tmp
         self.tb_video_dir.clear()
         self.tb_video_dir.append(video_dir)
@@ -136,7 +151,7 @@ class WindowClass(QMainWindow, form_class) :
         #save_dir_tmp.setFileMode(save_dir_tmp.Directory)
         #save_dir_tmp.setOptions(save_dir_tmp.DontUseNativeDialog)
 
-        if save_dir_tmp != NULL or save_dir_tmp != "":
+        if save_dir_tmp != None or save_dir_tmp != "":
             save_dir = save_dir_tmp
         self.tb_save_dir.append(save_dir)
     
